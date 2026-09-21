@@ -1,0 +1,22 @@
+{
+  "name": "Packet",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Packet": {
+        "$className": "Folder",
+        "$properties": {
+          "IconTint": {
+            "Color3": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "$path": "src/Packet"
+      }
+    }
+  }
+}
