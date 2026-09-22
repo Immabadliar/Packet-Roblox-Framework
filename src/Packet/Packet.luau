@@ -12,6 +12,7 @@ local IS_SERVER = RunService:IsServer()
 
 const DEFAULT_RATE_LIMIT = 60
 const MAX_SCHEMA_FIELDS = 128
+const DEBUG_DISABLE_RATE_LIMITER = false
 
 export type Direction = "ClientToServer" | "ServerToClient" | "Bidirectional"
 
@@ -85,6 +86,10 @@ local rateStates: {
 } = {}
 
 local function checkRateLimit(player: Player, packet: PacketObject): boolean
+	if DEBUG_DISABLE_RATE_LIMITER then
+		return true
+	end
+
 	local playerStates = rateStates[player]
 
 	if playerStates == nil then

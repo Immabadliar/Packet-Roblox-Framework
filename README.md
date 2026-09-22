@@ -404,11 +404,7 @@ local Attack = Packet.Define("Attack", {
 		WeaponId = Packet.u8,
 	},
 })
-```
 
-Packets exceeding the configured rate are dropped before listeners execute
-
-Packet currently uses a token bucket based rate limiter
 
 ## Security
 
@@ -618,16 +614,18 @@ Each module has one primary responsibility
 
 Packet is designed to keep local API and validation overhead low.
 
-The following benchmarks were recorded in Roblox Studio using **100,000 iterations per test**.
+The following benchmarks were recorded in Roblox Studio using **100,000 iterations per test**. The comparison uses the same benchmark cases before and after the measured change.
 
-| Operation | Average | Throughput |
-| --- | ---: | ---: |
-| Packet property access | 0.011 µs | 92.19M ops/sec |
-| `Packet.Get` | 0.040 µs | 24.78M ops/sec |
-| `Packet.Exists` | 0.041 µs | 24.15M ops/sec |
-| String validation | 0.045 µs | 22.30M ops/sec |
-| `u16` validation | 0.050 µs | 19.94M ops/sec |
-| `Vector3` validation | 0.075 µs | 13.30M ops/sec |
+| Operation | Previous | New | Change |
+| --- | ---: | ---: | ---: |
+| Packet property access | 92.19M ops/sec | **96.64M ops/sec** | **+4.8%** |
+| `Packet.Get` | 24.78M ops/sec | **25.21M ops/sec** | **+1.8%** |
+| `Packet.Exists` | 24.15M ops/sec | **24.67M ops/sec** | **+2.2%** |
+| String validation | 22.30M ops/sec | **21.28M ops/sec** | **-4.6%** |
+| `u16` validation | 19.94M ops/sec | **19.21M ops/sec** | **-3.7%** |
+| `Vector3` validation | 13.30M ops/sec | **13.36M ops/sec** | **+0.4%** |
+
+The largest gains were in packet property access and registry lookups. String and `u16` validation regressed in the new run, so those paths should not be treated as optimized. `Vector3` validation was effectively unchanged.
 
 ### Raw Results
 
@@ -673,7 +671,7 @@ Throughput: 13,304,595 ops/sec
 > These are local microbenchmarks and do not represent network throughput or packets per second across a Roblox client server connection. They measure operations such as registry lookup, property access, and schema validation.
 
 > [!IMPORTANT]
-> These results are from the current non buffer implementation. Packet currently uses an intermediate value representation for serialization. Binary buffer serialization is planned and will be benchmarked separately once implemented.
+> These results are from the current non-buffer implementation. Packet currently uses an intermediate value representation for serialization. Binary buffer serialization is planned and will be benchmarked separately once implemented.
 
 Performance can vary depending on hardware, Roblox Studio, runtime conditions, and future Packet versions.
 
