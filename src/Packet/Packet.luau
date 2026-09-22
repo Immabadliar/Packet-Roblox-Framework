@@ -1,17 +1,17 @@
 --!strict
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+const Players = game:GetService("Players")
+const RunService = game:GetService("RunService")
 
-local Registry = require(script.Parent.Registry)
-local Writer = require(script.Parent.Writer)
-local Reader = require(script.Parent.Reader)
-local Transport = require(script.Parent.Transport)
+const Registry = require('./Registry')
+const Writer = require('./Writer')
+const Reader = require('./Reader')
+const Transport = require('./Transport')
 
 local IS_SERVER = RunService:IsServer()
 
-local DEFAULT_RATE_LIMIT = 60
-local MAX_SCHEMA_FIELDS = 128
+const DEFAULT_RATE_LIMIT = 60
+const MAX_SCHEMA_FIELDS = 128
 
 export type Direction = "ClientToServer" | "ServerToClient" | "Bidirectional"
 

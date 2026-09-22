@@ -1,7 +1,7 @@
 --!strict
 
-local Writer = require(script.Parent.Writer)
-local Reader = require(script.Parent.Reader)
+const Writer = require('./Writer')
+const Reader = require('./Reader')
 
 export type Codec<T> = {
 	Name: string,
@@ -16,8 +16,8 @@ export type Schema = {
 
 local Codec = {}
 
-local MAX_STRING_LENGTH = 4096
-local MAX_ARRAY_LENGTH = 256
+const MAX_STRING_LENGTH = 4096
+const MAX_ARRAY_LENGTH = 256
 
 local function isFinite(value: unknown): boolean
 	return type(value) == "number" and value == value and value > -math.huge and value < math.huge
@@ -161,11 +161,13 @@ function Codec.Array<T>(codec: Codec<T>): Codec<{ T }>
 				return false
 			end
 
-			if #value > MAX_ARRAY_LENGTH then
+			local array = value :: { T }
+
+			if #array > MAX_ARRAY_LENGTH then
 				return false
 			end
 
-			for _, item in value do
+			for _, item in array do
 				if not codec.Validate(item) then
 					return false
 				end
@@ -175,11 +177,13 @@ function Codec.Array<T>(codec: Codec<T>): Codec<{ T }>
 		end,
 
 		Encode = function(writer, value)
-			assert(#value <= MAX_ARRAY_LENGTH, "Array exceeds maximum packet array length")
+			local array = value :: { T }
 
-			writer:Write(#value)
+			assert(#array <= MAX_ARRAY_LENGTH, "Array exceeds maximum packet array length")
 
-			for _, item in value do
+			writer:Write(#array)
+
+			for _, item: T in array do
 				codec.Encode(writer, item)
 			end
 		end,
@@ -191,9 +195,10 @@ function Codec.Array<T>(codec: Codec<T>): Codec<{ T }>
 				error("Invalid packet array length", 2)
 			end
 
-			local result = table.create(length)
+			local count = length :: number
+			local result: { T } = table.create(count)
 
-			for index = 1, length do
+			for index = 1, count do
 				result[index] = codec.Decode(reader)
 			end
 
@@ -211,8 +216,10 @@ function Codec.Struct(schema: Schema): Codec<{ [string]: any }>
 				return false
 			end
 
+			local record = value :: { [string]: any }
+
 			for field, fieldCodec in schema do
-				if not fieldCodec.Validate(value[field]) then
+				if not fieldCodec.Validate(record[field]) then
 					return false
 				end
 			end
@@ -221,13 +228,15 @@ function Codec.Struct(schema: Schema): Codec<{ [string]: any }>
 		end,
 
 		Encode = function(writer, value)
+			local record = value :: { [string]: any }
+
 			for field, fieldCodec in schema do
-				fieldCodec.Encode(writer, value[field])
+				fieldCodec.Encode(writer, record[field])
 			end
 		end,
 
 		Decode = function(reader)
-			local result = {}
+			local result: { [string]: any } = {}
 
 			for field, fieldCodec in schema do
 				result[field] = fieldCodec.Decode(reader)

@@ -1,7 +1,7 @@
 --!strict
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+const ReplicatedStorage = game:GetService("ReplicatedStorage")
+const RunService = game:GetService("RunService")
 
 export type TransportType = "Reliable" | "Unreliable"
 
@@ -9,7 +9,7 @@ local Transport = {}
 
 local IS_SERVER = RunService:IsServer()
 
-local MAX_PACKET_VALUES = 512
+const MAX_PACKET_VALUES = 512
 
 local folder: Folder
 local reliable: RemoteEvent
@@ -59,14 +59,6 @@ else
 	unreliable = folder:WaitForChild("Unreliable") :: UnreliableRemoteEvent
 end
 
-local function getRemote(transport: TransportType): RemoteEvent | UnreliableRemoteEvent
-	if transport == "Unreliable" then
-		return unreliable
-	end
-
-	return reliable
-end
-
 local function validPacketId(value: unknown): boolean
 	return type(value) == "number" and value == value and value % 1 == 0 and value >= 1 and value <= 65535
 end
@@ -76,7 +68,9 @@ local function validPayload(value: unknown): boolean
 		return false
 	end
 
-	if #value > MAX_PACKET_VALUES then
+	local payload = value :: { any }
+
+	if #payload > MAX_PACKET_VALUES then
 		return false
 	end
 
@@ -86,7 +80,11 @@ end
 function Transport.SendServer(transport: TransportType, packetId: number, payload: { any })
 	assert(not IS_SERVER, "SendServer can only be called from the client")
 
-	getRemote(transport):FireServer(packetId, payload)
+	if transport == "Unreliable" then
+		unreliable:FireServer(packetId, payload)
+	else
+		reliable:FireServer(packetId, payload)
+	end
 end
 
 function Transport.SendClient(transport: TransportType, player: Player, packetId: number, payload: { any })
@@ -94,13 +92,21 @@ function Transport.SendClient(transport: TransportType, player: Player, packetId
 
 	assert(player.Parent ~= nil, "Cannot send packet to disconnected player")
 
-	getRemote(transport):FireClient(player, packetId, payload)
+	if transport == "Unreliable" then
+		unreliable:FireClient(player, packetId, payload)
+	else
+		reliable:FireClient(player, packetId, payload)
+	end
 end
 
 function Transport.Broadcast(transport: TransportType, packetId: number, payload: { any })
 	assert(IS_SERVER, "Broadcast can only be called from the server")
 
-	getRemote(transport):FireAllClients(packetId, payload)
+	if transport == "Unreliable" then
+		unreliable:FireAllClients(packetId, payload)
+	else
+		reliable:FireAllClients(packetId, payload)
+	end
 end
 
 function Transport.Connect(callback: (Player?, number, { any }, TransportType) -> ())
