@@ -150,6 +150,43 @@ end)
 connection:Disconnect()
 ```
 
+## RemoteFunctions
+
+Use `Kind = Packet.Function` for request/response communication. The request uses `Schema`, and the returned value uses `ResponseSchema`.
+
+```lua
+local GetProfile = Packet.Define("GetProfile", {
+	Kind = Packet.Function,
+	Direction = Packet.ClientToServer,
+	Schema = {
+		UserId = Packet.u32,
+	},
+	ResponseSchema = {
+		Name = Packet.string,
+	},
+})
+```
+
+Register a handler on the receiving side:
+
+```lua
+GetProfile:Handle(function(player, request)
+	return {
+		Name = player.Name,
+	}
+end)
+```
+
+Invoke it from the client:
+
+```lua
+local profile = GetProfile:Invoke({
+	UserId = 123,
+})
+```
+
+On the server, `Invoke` takes the target player as its second argument. RemoteFunction packets use reliable transport and cannot be broadcast.
+
 ## One Time Listeners
 
 `Once` automatically disconnects after receiving the first packet
@@ -576,6 +613,69 @@ Each module has one primary responsibility
 `Writer` serializes packet values
 
 `Reader` deserializes packet values
+
+## Benchmarks
+
+Packet is designed to keep local API and validation overhead low.
+
+The following benchmarks were recorded in Roblox Studio using **100,000 iterations per test**.
+
+| Operation | Average | Throughput |
+| --- | ---: | ---: |
+| Packet property access | 0.011 µs | 92.19M ops/sec |
+| `Packet.Get` | 0.040 µs | 24.78M ops/sec |
+| `Packet.Exists` | 0.041 µs | 24.15M ops/sec |
+| String validation | 0.045 µs | 22.30M ops/sec |
+| `u16` validation | 0.050 µs | 19.94M ops/sec |
+| `Vector3` validation | 0.075 µs | 13.30M ops/sec |
+
+### Raw Results
+
+```text
+Packet.Get
+Iterations: 100000
+Total: 0.004036 seconds
+Average: 0.040 µs
+Throughput: 24,775,779 ops/sec
+
+Packet.Exists
+Iterations: 100000
+Total: 0.004141 seconds
+Average: 0.041 µs
+Throughput: 24,145,841 ops/sec
+
+Packet property access
+Iterations: 100000
+Total: 0.001085 seconds
+Average: 0.011 µs
+Throughput: 92,191,387 ops/sec
+
+u16 validation
+Iterations: 100000
+Total: 0.005015 seconds
+Average: 0.050 µs
+Throughput: 19,941,372 ops/sec
+
+string validation
+Iterations: 100000
+Total: 0.004485 seconds
+Average: 0.045 µs
+Throughput: 22,297,041 ops/sec
+
+Vector3 validation
+Iterations: 100000
+Total: 0.007516 seconds
+Average: 0.075 µs
+Throughput: 13,304,595 ops/sec
+```
+
+> [!NOTE]
+> These are local microbenchmarks and do not represent network throughput or packets per second across a Roblox client server connection. They measure operations such as registry lookup, property access, and schema validation.
+
+> [!IMPORTANT]
+> These results are from the current non buffer implementation. Packet currently uses an intermediate value representation for serialization. Binary buffer serialization is planned and will be benchmarked separately once implemented.
+
+Performance can vary depending on hardware, Roblox Studio, runtime conditions, and future Packet versions.
 
 ## Status
 

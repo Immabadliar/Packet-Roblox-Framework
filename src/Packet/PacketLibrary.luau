@@ -40,4 +40,7 @@ Packet.Bidirectional = "Bidirectional"
 Packet.Reliable = "Reliable"
 Packet.Unreliable = "Unreliable"
 
+Packet.Event = "Event"
+Packet.Function = "Function"
+
 return Packet

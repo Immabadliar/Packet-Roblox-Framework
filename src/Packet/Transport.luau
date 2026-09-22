@@ -14,6 +14,7 @@ const MAX_PACKET_VALUES = 512
 local folder: Folder
 local reliable: RemoteEvent
 local unreliable: UnreliableRemoteEvent
+local functionRemote: RemoteFunction
 
 if IS_SERVER then
 	local existingFolder = ReplicatedStorage:FindFirstChild("__Packet")
@@ -51,12 +52,26 @@ if IS_SERVER then
 		unreliable.Name = "Unreliable"
 		unreliable.Parent = folder
 	end
+
+	local functionInstance = folder:FindFirstChild("Function")
+
+	if functionInstance then
+		assert(functionInstance:IsA("RemoteFunction"), "__Packet.Function must be a RemoteFunction")
+
+		functionRemote = functionInstance
+	else
+		functionRemote = Instance.new("RemoteFunction")
+		functionRemote.Name = "Function"
+		functionRemote.Parent = folder
+	end
 else
 	folder = ReplicatedStorage:WaitForChild("__Packet") :: Folder
 
 	reliable = folder:WaitForChild("Reliable") :: RemoteEvent
 
 	unreliable = folder:WaitForChild("Unreliable") :: UnreliableRemoteEvent
+
+	functionRemote = folder:WaitForChild("Function") :: RemoteFunction
 end
 
 local function validPacketId(value: unknown): boolean
@@ -109,6 +124,20 @@ function Transport.Broadcast(transport: TransportType, packetId: number, payload
 	end
 end
 
+function Transport.InvokeServer(packetId: number, payload: { any }): { any }
+	assert(not IS_SERVER, "InvokeServer can only be called from the client")
+
+	return functionRemote:InvokeServer(packetId, payload)
+end
+
+function Transport.InvokeClient(player: Player, packetId: number, payload: { any }): { any }
+	assert(IS_SERVER, "InvokeClient can only be called from the server")
+
+	assert(player.Parent ~= nil, "Cannot invoke disconnected player")
+
+	return functionRemote:InvokeClient(player, packetId, payload)
+end
+
 function Transport.Connect(callback: (Player?, number, { any }, TransportType) -> ())
 	local function receive(transport: TransportType, player: Player?, packetId: unknown, payload: unknown)
 		if not validPacketId(packetId) then
@@ -141,6 +170,18 @@ function Transport.Connect(callback: (Player?, number, { any }, TransportType) -
 	unreliable.OnClientEvent:Connect(function(packetId, payload)
 		receive("Unreliable", nil, packetId, payload)
 	end)
+end
+
+function Transport.ConnectFunction(callback: (Player?, number, { any }) -> { any })
+	if IS_SERVER then
+		functionRemote.OnServerInvoke = function(player, packetId, payload)
+			return callback(player, packetId, payload)
+		end
+	else
+		functionRemote.OnClientInvoke = function(packetId, payload)
+			return callback(nil, packetId, payload)
+		end
+	end
 end
 
 return Transport
